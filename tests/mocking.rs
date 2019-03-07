@@ -2,8 +2,8 @@ extern crate mocktopus;
 
 mod mocking_fns;
 mod mocking_methods;
-mod mocking_trait_defaults;
-mod mocking_traits;
+//mod mocking_trait_defaults;
+//mod mocking_traits;
 
 use mocktopus::macros::*;
 use mocktopus::mocking::*;

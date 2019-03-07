@@ -703,7 +703,10 @@ mod injector_unignores_args {
     #[test]
     fn when_mocked_then_returns_second_arg() {
         unsafe {
-            two_args_returns_first_ignores_second.mock_raw(|x, y| MockResult::Continue((y, x)));
+            two_args_returns_first_ignores_second.mock_raw(|x, y| {
+                println!("X: {}, Y: {}", x, y);
+                MockResult::Continue((y, x))
+            });
         }
 
         assert_eq!(2, two_args_returns_first_ignores_second(1, 2));
