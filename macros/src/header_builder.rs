@@ -31,7 +31,7 @@ r#"{{
     extern crate mocktopus as {mocktopus};
     extern crate std as {std_crate};
     match {std_crate}::panic::catch_unwind({std_crate}::panic::AssertUnwindSafe (
-            || {mocktopus}::mocking::{mockable_trait}::call_mock(&{full_fn_name}, {extract_args}))) {{
+            || {mocktopus}::mocking::Mockable::call_mock(&{full_fn_name}, {extract_args}))) {{
         Ok({mocktopus}::mocking::MockResult::Continue({args_to_continue})) => {restore_args},
         Ok({mocktopus}::mocking::MockResult::Return(result)) => {{
             {forget_args}
@@ -48,7 +48,6 @@ r#"{{
         mocktopus           = MOCKTOPUS_CRATE_NAME,
         std_crate           = STD_CRATE_NAME,
         full_fn_name        = display(|f| write_full_fn_name(f, self, fn_ident, fn_decl)),
-        mockable_trait      = display(|f| write!(f, "Mockable{}", fn_args.len())),
         extract_args        = display(|f| write_extract_args(f, fn_args)),
         args_to_continue    = ARGS_TO_CONTINUE_NAME,
         restore_args        = display(|f| write_restore_args(f, fn_args)),
@@ -116,16 +115,15 @@ fn get_generic_param_name(param: &GenericParam) -> Option<String> {
 }
 
 fn write_extract_args<T>(f: &mut Formatter, fn_args: &Punctuated<FnArg, T>) -> Result<(), Error> {
-//    if fn_args.is_empty() {
-//        return write!(f, "()");
-//    }
-//    write!(f, "unsafe {{ (")?;
+   if fn_args.is_empty() {
+       return write!(f, "()");
+   }
+   write!(f, "unsafe {{ (")?;
     for fn_arg_name in iter_fn_arg_names(fn_args) {
-        write!(f, "unsafe {{ {}::mem::replace(&mut *(&{} as *const _ as *mut _), {}::mem::uninitialized()) }}, ",
+        write!(f, "{}::mem::replace(&mut *(&{} as *const _ as *mut _), {}::mem::uninitialized()), ",
                STD_CRATE_NAME, fn_arg_name, STD_CRATE_NAME)?;
     }
-    Ok(())
-//    write!(f, ") }}")
+    write!(f, ") }}")
 }
 
 fn write_restore_args<T>(f: &mut Formatter, fn_args: &Punctuated<FnArg, T>) -> Result<(), Error> {
