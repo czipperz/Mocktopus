@@ -31,7 +31,7 @@ r#"{{
     extern crate mocktopus as {mocktopus};
     extern crate std as {std_crate};
     match {std_crate}::panic::catch_unwind({std_crate}::panic::AssertUnwindSafe (
-            || {mocktopus}::mocking::Mockable::call_mock(&{full_fn_name}, {extract_args}))) {{
+            || {mocktopus}::mocking::call_mock(&{full_fn_name}, {extract_args}))) {{
         Ok({mocktopus}::mocking::MockResult::Continue({args_to_continue})) => {restore_args},
         Ok({mocktopus}::mocking::MockResult::Return(result)) => {{
             {forget_args}
