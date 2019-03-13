@@ -21,20 +21,21 @@ pub trait Mockable<I> {
 
     #[doc(hidden)]
     fn call_mock(&self, input: I) -> MockResult<I, Self::Output>;
-
-    #[doc(hidden)]
-    unsafe fn get_mock_id(&self) -> TypeId;
 }
 
 thread_local!{
     static MOCK_STORE: RefCell<HashMap<TypeId, Rc<RefCell<Box<Mock<(), Output = ()>>>>>> = RefCell::new(HashMap::new());
 }
 
-impl<O, F: FnOnce() -> O> Mockable<()> for F {
+fn get_mock_id<T>(_: T) -> TypeId {
+    (||()).type_id()
+}
+
+impl<O, F: Fn() -> O> Mockable<()> for F {
     type Output = O;
 
     unsafe fn mock_raw(&self, mock: impl Mock<(), Output = Self::Output>) {
-        let id = self.get_mock_id();
+        let id = get_mock_id(self);
         MOCK_STORE.with(|mock_ref_cell| {
             let real = Rc::new(RefCell::new(Box::new(mock) as Box<Mock<(), Output = _>>));
             let stored = transmute(real);
@@ -51,7 +52,7 @@ impl<O, F: FnOnce() -> O> Mockable<()> for F {
 
     fn call_mock(&self, input: ()) -> MockResult<(), Self::Output> {
         unsafe {
-            let id = self.get_mock_id();
+            let id = get_mock_id(self);
             let rc_opt = MOCK_STORE.with(|mock_ref_cell|
                 mock_ref_cell.borrow()
                     .get(&id)
@@ -68,17 +69,13 @@ impl<O, F: FnOnce() -> O> Mockable<()> for F {
             }
         }
     }
-
-    unsafe fn get_mock_id(&self) -> TypeId {
-        (||()).type_id()
-    }
 }
 
-impl<I1, O, F: FnOnce(I1) -> O> Mockable<(I1,)> for F {
+impl<I1, O, F: Fn(I1) -> O> Mockable<(I1,)> for F {
     type Output = O;
 
     unsafe fn mock_raw(&self, mock: impl Mock<(I1,), Output = Self::Output>) {
-        let id = self.get_mock_id();
+        let id = get_mock_id(self);
         MOCK_STORE.with(|mock_ref_cell| {
             let real = Rc::new(RefCell::new(Box::new(mock) as Box<Mock<(I1,), Output = _>>));
             let stored = transmute(real);
@@ -95,7 +92,7 @@ impl<I1, O, F: FnOnce(I1) -> O> Mockable<(I1,)> for F {
 
     fn call_mock(&self, input: (I1,)) -> MockResult<(I1,), Self::Output> {
         unsafe {
-            let id = self.get_mock_id();
+            let id = get_mock_id(self);
             let rc_opt = MOCK_STORE.with(|mock_ref_cell|
                 mock_ref_cell.borrow()
                     .get(&id)
@@ -112,17 +109,13 @@ impl<I1, O, F: FnOnce(I1) -> O> Mockable<(I1,)> for F {
             }
         }
     }
-
-    unsafe fn get_mock_id(&self) -> TypeId {
-        (||()).type_id()
-    }
 }
 
-impl<I1, I2, O, F: FnOnce(I1, I2) -> O> Mockable<(I1, I2)> for F {
+impl<I1, I2, O, F: Fn(I1, I2) -> O> Mockable<(I1, I2)> for F {
     type Output = O;
 
     unsafe fn mock_raw(&self, mock: impl Mock<(I1, I2), Output = Self::Output>) {
-        let id = self.get_mock_id();
+        let id = get_mock_id(self);
         MOCK_STORE.with(|mock_ref_cell| {
             let real = Rc::new(RefCell::new(Box::new(mock) as Box<Mock<(I1, I2), Output = _>>));
             let stored = transmute(real);
@@ -139,7 +132,7 @@ impl<I1, I2, O, F: FnOnce(I1, I2) -> O> Mockable<(I1, I2)> for F {
 
     fn call_mock(&self, input: (I1, I2)) -> MockResult<(I1, I2), Self::Output> {
         unsafe {
-            let id = self.get_mock_id();
+            let id = get_mock_id(self);
             let rc_opt = MOCK_STORE.with(|mock_ref_cell|
                 mock_ref_cell.borrow()
                     .get(&id)
@@ -156,17 +149,13 @@ impl<I1, I2, O, F: FnOnce(I1, I2) -> O> Mockable<(I1, I2)> for F {
             }
         }
     }
-
-    unsafe fn get_mock_id(&self) -> TypeId {
-        (||()).type_id()
-    }
 }
 
-impl<I1, I2, I3, O, F: FnOnce(I1, I2, I3) -> O> Mockable<(I1, I2, I3)> for F {
+impl<I1, I2, I3, O, F: Fn(I1, I2, I3) -> O> Mockable<(I1, I2, I3)> for F {
     type Output = O;
 
     unsafe fn mock_raw(&self, mock: impl Mock<(I1, I2, I3), Output = Self::Output>) {
-        let id = self.get_mock_id();
+        let id = get_mock_id(self);
         MOCK_STORE.with(|mock_ref_cell| {
             let real = Rc::new(RefCell::new(Box::new(mock) as Box<Mock<(I1, I2, I3), Output = _>>));
             let stored = transmute(real);
@@ -183,7 +172,7 @@ impl<I1, I2, I3, O, F: FnOnce(I1, I2, I3) -> O> Mockable<(I1, I2, I3)> for F {
 
     fn call_mock(&self, input: (I1, I2, I3)) -> MockResult<(I1, I2, I3), Self::Output> {
         unsafe {
-            let id = self.get_mock_id();
+            let id = get_mock_id(self);
             let rc_opt = MOCK_STORE.with(|mock_ref_cell|
                 mock_ref_cell.borrow()
                     .get(&id)
@@ -199,10 +188,6 @@ impl<I1, I2, I3, O, F: FnOnce(I1, I2, I3) -> O> Mockable<(I1, I2, I3)> for F {
                 None => MockResult::Continue(input),
             }
         }
-    }
-
-    unsafe fn get_mock_id(&self) -> TypeId {
-        (||()).type_id()
     }
 }
 
