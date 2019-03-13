@@ -15,180 +15,65 @@ use std::rc::Rc;
 pub trait Mockable<I> {
     type Output;
 
-    unsafe fn mock_raw(&self, mock: impl Mock<I, Output = Self::Output>);
+    unsafe fn mock_raw(&self, mock: impl Mock<I, Output = Self::Output>) {
+        // register_mock(self, mock);
+        let mock_id = get_mock_id(self);
+        let mock_boxed = Box::new(mock) as Box<Mock<I, Output = Self::Output>>;
+        let mock_shared = Rc::new(RefCell::new(mock_boxed));
+        let mock_stored = transmute(mock_shared);
+        MOCK_STORE.with(|mock_ref_cell| mock_ref_cell.borrow_mut().insert(mock_id, mock_stored));
+    }
 
-    fn mock_safe(&self, mock: impl Mock<I, Output = Self::Output> + 'static);
+    fn mock_safe(&self, mock: impl Mock<I, Output = Self::Output> + 'static) {
+        unsafe {
+            self.mock_raw(mock)
+        }
+    }
 
     #[doc(hidden)]
-    fn call_mock(&self, input: I) -> MockResult<I, Self::Output>;
-}
-
-thread_local!{
-    static MOCK_STORE: RefCell<HashMap<TypeId, Rc<RefCell<Box<Mock<(), Output = ()>>>>>> = RefCell::new(HashMap::new());
+    fn call_mock(&self, input: I) -> MockResult<I, Self::Output> {
+        unsafe {
+            let id = get_mock_id(self);
+            let rc_opt = MOCK_STORE.with(|mock_ref_cell|
+                mock_ref_cell.borrow()
+                    .get(&id)
+                    .cloned()
+            );
+            let stored_opt = rc_opt.as_ref()
+                .and_then(|rc| rc.try_borrow_mut().ok());
+            match stored_opt {
+                Some(mut stored) => {
+                    let real: &mut Box<Mock<I, Output = Self::Output>> = transmute(&mut*stored);
+                    real.call_mock(input)
+                }
+                None => MockResult::Continue(input),
+            }
+        }
+    }
 }
 
 fn get_mock_id<T>(_: T) -> TypeId {
     (||()).type_id()
 }
 
+thread_local!{
+    static MOCK_STORE: RefCell<HashMap<TypeId, Rc<RefCell<Box<Mock<(), Output = ()>>>>>> = RefCell::new(HashMap::new());
+}
+
 impl<O, F: Fn() -> O> Mockable<()> for F {
     type Output = O;
-
-    unsafe fn mock_raw(&self, mock: impl Mock<(), Output = Self::Output>) {
-        let id = get_mock_id(self);
-        MOCK_STORE.with(|mock_ref_cell| {
-            let real = Rc::new(RefCell::new(Box::new(mock) as Box<Mock<(), Output = _>>));
-            let stored = transmute(real);
-            mock_ref_cell.borrow_mut()
-                .insert(id, stored);
-        })
-    }
-
-    fn mock_safe(&self, mock: impl Mock<(), Output = Self::Output> + 'static ) {
-        unsafe {
-            self.mock_raw(mock)
-        }
-    }
-
-    fn call_mock(&self, input: ()) -> MockResult<(), Self::Output> {
-        unsafe {
-            let id = get_mock_id(self);
-            let rc_opt = MOCK_STORE.with(|mock_ref_cell|
-                mock_ref_cell.borrow()
-                    .get(&id)
-                    .cloned()
-            );
-            let stored_opt = rc_opt.as_ref()
-                .and_then(|rc| rc.try_borrow_mut().ok());
-            match stored_opt {
-                Some(mut stored) => {
-                    let real: &mut Box<Mock<(), Output = O>> = transmute(&mut*stored);
-                    real.call_mock(input)
-                }
-                None => MockResult::Continue(input),
-            }
-        }
-    }
 }
 
 impl<I1, O, F: Fn(I1) -> O> Mockable<(I1,)> for F {
     type Output = O;
-
-    unsafe fn mock_raw(&self, mock: impl Mock<(I1,), Output = Self::Output>) {
-        let id = get_mock_id(self);
-        MOCK_STORE.with(|mock_ref_cell| {
-            let real = Rc::new(RefCell::new(Box::new(mock) as Box<Mock<(I1,), Output = _>>));
-            let stored = transmute(real);
-            mock_ref_cell.borrow_mut()
-                .insert(id, stored);
-        })
-    }
-
-    fn mock_safe(&self, mock: impl Mock<(I1,), Output = Self::Output> + 'static ) {
-        unsafe {
-            self.mock_raw(mock)
-        }
-    }
-
-    fn call_mock(&self, input: (I1,)) -> MockResult<(I1,), Self::Output> {
-        unsafe {
-            let id = get_mock_id(self);
-            let rc_opt = MOCK_STORE.with(|mock_ref_cell|
-                mock_ref_cell.borrow()
-                    .get(&id)
-                    .cloned()
-            );
-            let stored_opt = rc_opt.as_ref()
-                .and_then(|rc| rc.try_borrow_mut().ok());
-            match stored_opt {
-                Some(mut stored) => {
-                    let real: &mut Box<Mock<(I1,), Output = O>> = transmute(&mut*stored);
-                    real.call_mock(input)
-                }
-                None => MockResult::Continue(input),
-            }
-        }
-    }
 }
 
 impl<I1, I2, O, F: Fn(I1, I2) -> O> Mockable<(I1, I2)> for F {
     type Output = O;
-
-    unsafe fn mock_raw(&self, mock: impl Mock<(I1, I2), Output = Self::Output>) {
-        let id = get_mock_id(self);
-        MOCK_STORE.with(|mock_ref_cell| {
-            let real = Rc::new(RefCell::new(Box::new(mock) as Box<Mock<(I1, I2), Output = _>>));
-            let stored = transmute(real);
-            mock_ref_cell.borrow_mut()
-                .insert(id, stored);
-        })
-    }
-
-    fn mock_safe(&self, mock: impl Mock<(I1, I2), Output = Self::Output> + 'static ) {
-        unsafe {
-            self.mock_raw(mock)
-        }
-    }
-
-    fn call_mock(&self, input: (I1, I2)) -> MockResult<(I1, I2), Self::Output> {
-        unsafe {
-            let id = get_mock_id(self);
-            let rc_opt = MOCK_STORE.with(|mock_ref_cell|
-                mock_ref_cell.borrow()
-                    .get(&id)
-                    .cloned()
-            );
-            let stored_opt = rc_opt.as_ref()
-                .and_then(|rc| rc.try_borrow_mut().ok());
-            match stored_opt {
-                Some(mut stored) => {
-                    let real: &mut Box<Mock<(I1, I2), Output = O>> = transmute(&mut*stored);
-                    real.call_mock(input)
-                }
-                None => MockResult::Continue(input),
-            }
-        }
-    }
 }
 
 impl<I1, I2, I3, O, F: Fn(I1, I2, I3) -> O> Mockable<(I1, I2, I3)> for F {
     type Output = O;
-
-    unsafe fn mock_raw(&self, mock: impl Mock<(I1, I2, I3), Output = Self::Output>) {
-        let id = get_mock_id(self);
-        MOCK_STORE.with(|mock_ref_cell| {
-            let real = Rc::new(RefCell::new(Box::new(mock) as Box<Mock<(I1, I2, I3), Output = _>>));
-            let stored = transmute(real);
-            mock_ref_cell.borrow_mut()
-                .insert(id, stored);
-        })
-    }
-
-    fn mock_safe(&self, mock: impl Mock<(I1, I2, I3), Output = Self::Output> + 'static ) {
-        unsafe {
-            self.mock_raw(mock)
-        }
-    }
-
-    fn call_mock(&self, input: (I1, I2, I3)) -> MockResult<(I1, I2, I3), Self::Output> {
-        unsafe {
-            let id = get_mock_id(self);
-            let rc_opt = MOCK_STORE.with(|mock_ref_cell|
-                mock_ref_cell.borrow()
-                    .get(&id)
-                    .cloned()
-            );
-            let stored_opt = rc_opt.as_ref()
-                .and_then(|rc| rc.try_borrow_mut().ok());
-            match stored_opt {
-                Some(mut stored) => {
-                    let real: &mut Box<Mock<(I1, I2, I3), Output = O>> = transmute(&mut*stored);
-                    real.call_mock(input)
-                }
-                None => MockResult::Continue(input),
-            }
-        }
-    }
 }
 
 
