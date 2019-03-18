@@ -10,6 +10,65 @@ use mocktopus::mocking::*;
 use mocktopus::mocking_utils::*;
 use std::fmt::Display;
 
+// fn is_extra_safe<I, O>(_: impl SafeMock<I, Output = O>) {
+
+// }
+
+fn something_simple() {
+    // is_extra_safe(|x: &u8| MockResult::Return(x));
+}
+
+#[mockable]
+fn terrible(_: &str) -> &'static str {
+    "a"
+}
+
+#[test]
+fn terrible_test() {
+    // let yy: Box<Fn(&str) -> &str> = Box::new(|x: &str| x);
+    // let y: Box<Fn(&str) -> &'static str> = yy;
+
+    // let xx: MockContainer<for<'r> fn((&'r str,)) -> &'r str> = (|a: &str| MockResult::Return(a)).into_mock_container();
+    // let xx: MockContainer<fn((&str,)) -> &str> = (|a: &str| MockResult::Return(a)).into_mock_container();
+    // let xx: MockContainer<for<'r> fn((&'r str,)) -> &'r str> = (|a| MockResult::Return(a)).into_mock_container();
+    // let yy: MockContainer<for<'a> fn((&'a str,)) -> &'a str> = (|a| MockResult::Return(a)).into_mock_container();
+    // let x: MockContainer<fn((&str,)) -> &'static str> = xx;
+    // terrible.mock_extra_safe(xx);
+    terrible.mock_extra_safe((|a: &str| MockResult::Return("a")).into_mock_container());
+    let local_str = "local".to_string();
+    // terrible.fake_call((local_str.as_str(),), &mut |a| MockResult::Return(a));
+    let static_str: &'static str = terrible(local_str.as_str());
+    assert_eq!("local", static_str);
+}
+
+#[mockable]
+fn rather_good(s: &str) -> &str {
+    s
+}
+
+#[test]
+fn rather_good_test() {
+    rather_good.mock_extra_safe((|a: &str| MockResult::Return(a)).into_mock_container());
+    let x = "abc".to_string();
+    let y = x.as_str();
+    let z = rather_good(y);
+    assert_eq!("mocked", z);
+}
+
+#[mockable]
+fn rather_good1(s: &'static str) -> &'static str {
+    s
+}
+
+#[test]
+fn rather_good1_test() {
+    rather_good.mock_extra_safe((|a| MockResult::Return(a)).into_mock_container());
+    let x = "abc".to_string();
+    let y = x.as_str();
+    let z = rather_good("y");
+    assert_eq!("mocked", z);
+}
+
 mod mock_safe {
     use super::*;
 

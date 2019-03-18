@@ -4,11 +4,25 @@ use std::any::{Any, TypeId};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::mem::transmute;
+use std::marker::PhantomData;
 use std::rc::Rc;
 
 thread_local!{
     static MOCK_STORE: RefCell<HashMap<TypeId, Rc<RefCell<Box<Mock<(), Output = ()>>>>>> = RefCell::new(HashMap::new());
 }
+
+// trait IntoMockContainer<Output = MockContainer>
+//
+// struct MockConainer<I, O> {
+//     mock: Box<Mock<(), Output = ()>>,
+//     _variance_guard: PhantomData<Fn(
+// }
+//
+// trait Mock<I> {
+//     type Output;
+//
+//     fn call_mock
+// }
 
 /// Trait for setting up mocks
 ///
@@ -31,6 +45,19 @@ pub trait Mockable<I> {
         unsafe {
             self.mock_raw(mock)
         }
+    }
+
+    fn mock_extra_safe(&self, mut mock: MockContainer<fn(Self::Output) -> I>
+            //  + SafeMock<I, Self::Output> + 'static
+        ){
+        unsafe {
+            let mock_id = get_mock_id(self);
+            MOCK_STORE.with(|mock_ref_cell| mock_ref_cell.borrow_mut().insert(mock_id, Rc::new(RefCell::new(mock.mock))));
+        }
+    }
+
+    fn fake_call(&self, input: I, mock: &mut Mock<I, Output = Self::Output>) -> Self::Output {
+        mock.fake_call(input)
     }
 }
 
