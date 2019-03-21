@@ -56,6 +56,15 @@ pub trait Mockable<I> {
         }
     }
 
+    fn mock_even_safer(&self, mut mock: MockContainer<fn(I) -> Self::Output>
+            //  + SafeMock<I, Self::Output> + 'static
+        ){
+        unsafe {
+            let mock_id = get_mock_id(self);
+            MOCK_STORE.with(|mock_ref_cell| mock_ref_cell.borrow_mut().insert(mock_id, Rc::new(RefCell::new(mock.mock))));
+        }
+    }
+
     fn fake_call(&self, input: I, mock: &mut Mock<I, Output = Self::Output>) -> Self::Output {
         mock.fake_call(input)
     }

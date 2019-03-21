@@ -18,23 +18,34 @@ fn something_simple() {
     // is_extra_safe(|x: &u8| MockResult::Return(x));
 }
 
+// input -  - accept supertype // covariant
+// output - accept subtype  // contravariant
+
+// input    subs &'a with &'static -> evil, will treat &'a as &'static in mock
+// input    subs &'static with &'a -> seems ok
+
+fn ehh(_: &'static u8) -> MockResult<(&'static u8,), &'static str> {
+    MockResult::Return("ehh")
+}
+
 #[mockable]
 fn terrible(_: &str) -> &'static str {
     "a"
 }
 
+// 'a < 'b < 'static
+// mock &'a      -> &'static
+// base &'b      -> &'b
+// evil &'static -> &'a
+// cast &'static -> &'a
+
 #[test]
 fn terrible_test() {
-    // let yy: Box<Fn(&str) -> &str> = Box::new(|x: &str| x);
-    // let y: Box<Fn(&str) -> &'static str> = yy;
+    let container: MockContainer<fn((&'static u8,)) -> &'static str> = ehh.into_mock_container_normal();
+    let contrarys: MockContainer<fn((&'static u8,)) -> &str> = container;
 
-    // let xx: MockContainer<for<'r> fn((&'r str,)) -> &'r str> = (|a: &str| MockResult::Return(a)).into_mock_container();
-    // let xx: MockContainer<fn((&str,)) -> &str> = (|a: &str| MockResult::Return(a)).into_mock_container();
-    // let xx: MockContainer<for<'r> fn((&'r str,)) -> &'r str> = (|a| MockResult::Return(a)).into_mock_container();
-    // let yy: MockContainer<for<'a> fn((&'a str,)) -> &'a str> = (|a| MockResult::Return(a)).into_mock_container();
-    // let x: MockContainer<fn((&str,)) -> &'static str> = xx;
-    // terrible.mock_extra_safe(xx);
-    terrible.mock_extra_safe((|a: &str| MockResult::Return("a")).into_mock_container());
+
+    terrible.mock_extra_safe((|a: &'static str| MockResult::Return(a)).into_mock_container());
     let local_str = "local".to_string();
     // terrible.fake_call((local_str.as_str(),), &mut |a| MockResult::Return(a));
     let static_str: &'static str = terrible(local_str.as_str());
@@ -48,7 +59,7 @@ fn rather_good(s: &str) -> &str {
 
 #[test]
 fn rather_good_test() {
-    rather_good.mock_extra_safe((|a: &str| MockResult::Return(a)).into_mock_container());
+    rather_good.mock_extra_safe((|a| MockResult::Return(a)).into_mock_container());
     let x = "abc".to_string();
     let y = x.as_str();
     let z = rather_good(y);

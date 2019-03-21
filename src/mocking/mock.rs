@@ -22,6 +22,14 @@ pub trait Mock<I> {
             _variance_guard: PhantomData::default(),
         }
     }
+
+    fn into_mock_container_normal(self) -> MockContainer<fn(I) -> Self::Output> where Self: Sized {
+        let mock_box = Box::new(self) as Box<Mock<I, Output = Self::Output>>;
+        MockContainer {
+            mock: unsafe { std::mem::transmute(mock_box) },
+            _variance_guard: PhantomData::default(),
+        }
+    }
 }
 
 pub struct MockContainer<F> {
