@@ -28,24 +28,42 @@ fn ehh(_: &'static u8) -> MockResult<(&'static u8,), &'static str> {
     MockResult::Return("ehh")
 }
 
+struct Huh;
+
+trait Heh<T> {
+    fn heh(&self, _: T) { println!("heh")}
+}
+
 #[mockable]
 fn terrible(_: &str) -> &'static str {
+    // impl Heh<fn(&str) -> &'static str {terrible}> for Huh {}
     "a"
 }
 
 // 'a < 'b < 'static
 // mock &'a      -> &'static
 // base &'b      -> &'b
-// evil &'static -> &'a
+// evil &'static -> &'b
 // cast &'static -> &'a
+
+// (|a| b).mock(foo)
+// mock does NOT get casted (MockResult is invariant maybe)
+// accepts in .mock only fns strictly lower
+
+// inputs and outputs wrapped in invariant struct!
+// mock fn does NOT get casted at all!
+// target fn gets casted to cast lifetime, then starts accepting incastable struct
+// target fn
+// good!
 
 #[test]
 fn terrible_test() {
+
     let container: MockContainer<fn((&'static u8,)) -> &'static str> = ehh.into_mock_container_normal();
     let contrarys: MockContainer<fn((&'static u8,)) -> &str> = container;
+    // Huh.heh(terrible);
 
-
-    terrible.mock_extra_safe((|a: &'static str| MockResult::Return(a)).into_mock_container());
+    terrible.mock_even_safer((|a: &'static str| MockResult::Return(a)).into_mock_container_normal());
     let local_str = "local".to_string();
     // terrible.fake_call((local_str.as_str(),), &mut |a| MockResult::Return(a));
     let static_str: &'static str = terrible(local_str.as_str());

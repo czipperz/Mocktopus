@@ -56,7 +56,7 @@ pub trait Mockable<I> {
         }
     }
 
-    fn mock_even_safer(&self, mut mock: MockContainer<fn(I) -> Self::Output>
+    fn mock_even_safer(&mut self, mut mock: MockContainer<fn(I) -> Self::Output>
             //  + SafeMock<I, Self::Output> + 'static
         ){
         unsafe {
@@ -64,6 +64,8 @@ pub trait Mockable<I> {
             MOCK_STORE.with(|mock_ref_cell| mock_ref_cell.borrow_mut().insert(mock_id, Rc::new(RefCell::new(mock.mock))));
         }
     }
+
+    // fn mock_ugh<
 
     fn fake_call(&self, input: I, mock: &mut Mock<I, Output = Self::Output>) -> Self::Output {
         mock.fake_call(input)
@@ -110,5 +112,3 @@ impl<I1, I2, O, F: Fn(I1, I2) -> O> Mockable<(I1, I2)> for F {
 impl<I1, I2, I3, O, F: Fn(I1, I2, I3) -> O> Mockable<(I1, I2, I3)> for F {
     type Output = O;
 }
-
-
