@@ -270,3 +270,43 @@ impl<'a> MockContext<'a> {
         f()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod scoped_mock {
+        use super::*;
+        use crate::macros::mockable;
+
+        #[mockable]
+        fn mockable_1() -> i32 {
+            0
+        }
+
+        #[test]
+        fn dropping_the_scope_deregisters_the_mock() {
+            {
+                let _scope = unsafe { ScapedMock::new(&mockable_1, || MockResult::Return(1)) };
+                assert_eq!(mockable_1(), 1);
+            }
+
+            assert_eq!(mockable_1(), 0);
+        }
+
+        #[test]
+        fn can_use_local_variables_safely() {
+            let mut x = 0;
+            {
+                let _scope = unsafe {
+                    ScopedMock::new(&mockable_1, || {
+                        x += 1;
+                        MockResult::Return(1)
+                    })
+                };
+                mockable_1();
+            }
+            assert_eq!(x, 1);
+        }
+    }
+}
